@@ -13,7 +13,9 @@ from app.models import (
     AgentExecutionTask,
     AgentProfile,
     AgentVersion,
+    ConversationTask,
 )
+from app.services.safety_policy import evaluate_execution_safety
 
 TERMINAL_EXECUTION_STATUSES = {"succeeded", "failed", "cancelled"}
 
@@ -171,6 +173,7 @@ def start_execution(
     idempotency_key: str | None,
     timeout_seconds: int,
     max_retries: int,
+    commit: bool = True,
 ) -> AgentExecution:
     profile = db.execute(
         select(AgentProfile).where(
@@ -196,6 +199,16 @@ def start_execution(
     if version is None:
         raise RuntimeValidationError("No published version found for this agent.")
 
+    try:
+        safety = evaluate_execution_safety(
+            model_provider=profile.model_provider,
+            task_type=initial_task_type,
+            input_payload=input_payload,
+            task_payload=initial_task_payload,
+        )
+    except ValueError as exc:
+        raise RuntimeValidationError(str(exc)) from exc
+
     execution = AgentExecution(
         id=str(uuid4()),
         organization_id=organization_id,
@@ -203,7 +216,7 @@ def start_execution(
         agent_version_id=version.id,
         requested_by_user_id=requested_by_user_id,
         project_id=project_id,
-        status="queued",
+        status="waiting_approval" if safety.requires_human_approval else "queued",
         idempotency_key=idempotency_key,
         timeout_seconds=timeout_seconds,
         max_retries=max_retries,
@@ -230,6 +243,14 @@ def start_execution(
         actor_user_id=requested_by_user_id,
         details=f"version={version.version_number};idempotency_key={idempotency_key or 'none'}",
     )
+    if safety.requires_human_approval:
+        _create_policy_approval(
+            db,
+            organization_id=organization_id,
+            execution_id=execution.id,
+            actor_user_id=requested_by_user_id,
+            reason=safety.reason or "high_impact_action",
+        )
     _append_audit_log(
         db,
         organization_id=organization_id,
@@ -239,13 +260,45 @@ def start_execution(
         details=f"task_type={initial_task_type};position=1",
     )
 
-    try:
-        db.commit()
-    except IntegrityError as exc:
-        db.rollback()
-        raise RuntimeConflictError("Failed to start execution due to data integrity conflict.") from exc
-    db.refresh(execution)
+    if commit:
+        try:
+            db.commit()
+        except IntegrityError as exc:
+            db.rollback()
+            raise RuntimeConflictError("Failed to start execution due to data integrity conflict.") from exc
+        db.refresh(execution)
+    else:
+        db.flush()
     return execution
+
+
+def _create_policy_approval(
+    db: Session,
+    *,
+    organization_id: str,
+    execution_id: str,
+    actor_user_id: str,
+    reason: str,
+) -> AgentExecutionApproval:
+    """Create the immutable approval request in the caller's transaction."""
+    approval = AgentExecutionApproval(
+        id=str(uuid4()),
+        organization_id=organization_id,
+        execution_id=execution_id,
+        requested_by_user_id=actor_user_id,
+        status="pending",
+        request_reason=reason,
+    )
+    db.add(approval)
+    _append_audit_log(
+        db,
+        organization_id=organization_id,
+        execution_id=execution_id,
+        action="approval.required_by_policy",
+        actor_user_id=actor_user_id,
+        details=f"reason={reason}",
+    )
+    return approval
 
 
 def get_execution(
@@ -294,6 +347,24 @@ def queue_execution_task(
     if execution.status in TERMINAL_EXECUTION_STATUSES:
         raise RuntimeValidationError("Cannot queue tasks for terminal execution.")
 
+    profile = db.execute(
+        select(AgentProfile).where(
+            AgentProfile.id == execution.agent_profile_id,
+            AgentProfile.organization_id == organization_id,
+        )
+    ).scalar_one_or_none()
+    if profile is None:
+        raise RuntimeNotFoundError("Agent not found for execution.")
+    try:
+        safety = evaluate_execution_safety(
+            model_provider=profile.model_provider,
+            task_type=task_type,
+            input_payload=None,
+            task_payload=task_payload,
+        )
+    except ValueError as exc:
+        raise RuntimeValidationError(str(exc)) from exc
+
     max_position = db.execute(
         select(func.max(AgentExecutionTask.queue_position)).where(
             AgentExecutionTask.organization_id == organization_id,
@@ -326,6 +397,16 @@ def queue_execution_task(
         actor_user_id=actor_user_id,
         details=f"task_type={task_type};position={next_position};status={initial_status}",
     )
+    if safety.requires_human_approval:
+        execution.status = "waiting_approval"
+        _create_policy_approval(
+            db,
+            organization_id=organization_id,
+            execution_id=execution.id,
+            actor_user_id=actor_user_id,
+            reason=safety.reason or "high_impact_action",
+        )
+        db.add(execution)
     db.commit()
     db.refresh(row)
     return row
@@ -392,6 +473,16 @@ def update_execution_status(
         raise RuntimeValidationError(
             f"Invalid execution transition from '{execution.status}' to '{normalized_status}'."
         )
+    if normalized_status == "running":
+        pending_approval = db.execute(
+            select(AgentExecutionApproval.id).where(
+                AgentExecutionApproval.organization_id == organization_id,
+                AgentExecutionApproval.execution_id == execution_id,
+                AgentExecutionApproval.status == "pending",
+            )
+        ).scalar_one_or_none()
+        if pending_approval is not None:
+            raise RuntimeValidationError("Execution cannot run while a human approval request is pending.")
 
     now = datetime.now(UTC)
     execution.status = normalized_status
@@ -565,7 +656,7 @@ def review_execution_approval(
         select(AgentExecutionApproval).where(
             AgentExecutionApproval.id == approval_id,
             AgentExecutionApproval.organization_id == organization_id,
-        )
+        ).with_for_update()
     ).scalar_one_or_none()
     if approval is None:
         raise RuntimeNotFoundError("Approval request not found.")
@@ -578,6 +669,8 @@ def review_execution_approval(
     execution = get_execution(db, organization_id=organization_id, execution_id=approval.execution_id)
     if execution is None:
         raise RuntimeNotFoundError("Execution not found.")
+    if approval.requested_by_user_id == reviewer_user_id:
+        raise RuntimeValidationError("The requester cannot approve or reject their own approval request.")
 
     approval.status = status
     approval.reviewer_user_id = reviewer_user_id
@@ -587,6 +680,18 @@ def review_execution_approval(
     if status == "rejected":
         execution.completed_at = datetime.now(UTC)
         execution.failure_reason = _redact_text(comment) or "approval_rejected"
+
+    # The Supervisor owns the conversation-task projection, but its state must
+    # remain transactionally aligned with the sole M2.5 approval decision.
+    for conversation_task in db.execute(
+        select(ConversationTask).where(
+            ConversationTask.organization_id == organization_id,
+            ConversationTask.execution_id == execution.id,
+            ConversationTask.status == "waiting_approval",
+        )
+    ).scalars():
+        conversation_task.status = "queued" if status == "approved" else "cancelled"
+        db.add(conversation_task)
 
     _append_audit_log(
         db,

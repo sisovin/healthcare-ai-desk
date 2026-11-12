@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:5173"
     database_url: str = "mysql+pymysql://had_app:password@mysql:3306/healthcare_ai_desk"
     redis_url: str = "redis://localhost:6379/0"
+    conversation_encryption_key: str = ""
 
     model_config = SettingsConfigDict(
         env_file=".env",

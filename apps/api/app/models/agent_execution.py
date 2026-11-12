@@ -9,6 +9,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    Index,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -26,6 +27,8 @@ class AgentExecution(Base):
             "idempotency_key",
             name="uq_agent_executions_org_agent_idempotency",
         ),
+        Index("organization_id_2", "organization_id", "agent_version_id"),
+        Index("organization_id_3", "organization_id", "project_id"),
         CheckConstraint(
             "status IN ('queued','running','waiting_approval','succeeded','failed','cancelled')",
             name="ck_agent_executions_status",

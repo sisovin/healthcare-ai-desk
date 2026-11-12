@@ -5,6 +5,8 @@ from app.models.agent_execution import AgentExecution
 from app.models.agent_execution_task import AgentExecutionTask
 from app.models.agent_execution_audit_log import AgentExecutionAuditLog
 from app.models.agent_execution_approval import AgentExecutionApproval
+from app.models.conversation import Conversation, ConversationAuditLog, ConversationMember, ConversationMessage, ConversationTask, ConversationTaskDependency, SupervisorPlan
+from app.models.workflow_outbox import WorkflowEventConsumption, WorkflowOutboxEvent
 from app.models.organization import Organization
 from app.models.organization_membership import OrganizationMembership
 from app.models.patient_record import PatientRecord
@@ -21,6 +23,15 @@ __all__ = [
     "AgentExecutionTask",
     "AgentExecutionAuditLog",
     "AgentExecutionApproval",
+    "Conversation",
+    "ConversationAuditLog",
+    "ConversationMember",
+    "ConversationMessage",
+    "ConversationTask",
+    "ConversationTaskDependency",
+    "SupervisorPlan",
+    "WorkflowEventConsumption",
+    "WorkflowOutboxEvent",
     "Organization",
     "OrganizationMembership",
     "PatientRecord",

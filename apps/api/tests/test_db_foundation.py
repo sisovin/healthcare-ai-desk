@@ -51,6 +51,14 @@ def test_metadata_can_create_schema_on_sqlite() -> None:
         "agent_execution_tasks",
         "agent_execution_audit_logs",
         "agent_execution_approvals",
+        "conversations",
+        "conversation_members",
+        "conversation_messages",
+        "conversation_tasks",
+        "conversation_task_dependencies",
+        "conversation_audit_logs",
+        "workflow_outbox_events",
+        "workflow_event_consumptions",
     }.issubset(table_names)
 
 

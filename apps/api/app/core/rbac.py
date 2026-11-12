@@ -15,6 +15,10 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         "project.write",
         "project.manage_members",
         "audit.read",
+        "conversation.read",
+        "conversation.write",
+        "conversation.manage",
+        "conversation.audit.read",
     },
     "admin": {
         "organization.read",
@@ -29,6 +33,10 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         "project.write",
         "project.manage_members",
         "audit.read",
+        "conversation.read",
+        "conversation.write",
+        "conversation.manage",
+        "conversation.audit.read",
     },
     "manager": {
         "organization.read",
@@ -40,6 +48,9 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         "project.read",
         "project.write",
         "project.manage_members",
+        "conversation.read",
+        "conversation.write",
+        "conversation.manage",
     },
     "member": {
         "organization.read",
@@ -48,12 +59,15 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
         "agent.runtime.read",
         "project.read",
         "project.write",
+        "conversation.read",
+        "conversation.write",
     },
     "viewer": {
         "organization.read",
         "agent.read",
         "agent.runtime.read",
         "project.read",
+        "conversation.read",
     },
 }
 

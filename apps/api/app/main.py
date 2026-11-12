@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.agents import router as agents_router
 from app.api.v1.agent_runtime import router as agent_runtime_router
+from app.api.v1.conversations import router as conversations_router
 from app.core.config import settings
 from app.api.v1.auth import router as auth_router
 from app.api.v1.health import router as health_router
@@ -28,6 +29,7 @@ app.include_router(auth_router, prefix="/api/v1")
 app.include_router(organizations_router, prefix="/api/v1")
 app.include_router(agents_router, prefix="/api/v1")
 app.include_router(agent_runtime_router, prefix="/api/v1")
+app.include_router(conversations_router, prefix="/api/v1")
 
 
 @app.get("/", tags=["root"])

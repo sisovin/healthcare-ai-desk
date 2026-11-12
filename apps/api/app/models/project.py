@@ -10,6 +10,7 @@ class Project(Base):
     __tablename__ = "projects"
     __table_args__ = (
         UniqueConstraint("organization_id", "slug", name="uq_projects_org_slug"),
+        UniqueConstraint("organization_id", "id", name="uq_projects_org_id"),
         CheckConstraint("status IN ('draft','active','completed','archived')", name="ck_projects_status"),
     )
 

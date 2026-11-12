@@ -16,6 +16,7 @@ from app.models import AgentExecutionApproval, AgentExecutionTask, AgentProfile,
 ORG_ID = "11111111-1111-1111-1111-111111111111"
 OTHER_ORG_ID = "22222222-2222-2222-2222-222222222222"
 OWNER_ID = "33333333-3333-3333-3333-333333333333"
+ADMIN_ID = "33333333-3333-3333-3333-333333333334"
 VIEWER_ID = "44444444-4444-4444-4444-444444444444"
 OUTSIDER_ID = "55555555-5555-5555-5555-555555555555"
 AGENT_ID = "66666666-6666-6666-6666-666666666666"
@@ -30,6 +31,13 @@ def _seed_db(db: Session) -> None:
                 id=OWNER_ID,
                 email="owner-runtime@example.com",
                 display_name="Owner Runtime",
+                password_hash=hash_password("StrongPass123!"),
+                is_active=True,
+            ),
+            User(
+                id=ADMIN_ID,
+                email="admin-runtime@example.com",
+                display_name="Admin Runtime",
                 password_hash=hash_password("StrongPass123!"),
                 is_active=True,
             ),
@@ -52,6 +60,12 @@ def _seed_db(db: Session) -> None:
                 organization_id=ORG_ID,
                 user_id=OWNER_ID,
                 role="owner",
+            ),
+            OrganizationMembership(
+                id=str(uuid4()),
+                organization_id=ORG_ID,
+                user_id=ADMIN_ID,
+                role="admin",
             ),
             OrganizationMembership(
                 id=str(uuid4()),
@@ -123,7 +137,7 @@ def test_runtime_idempotency_retry_and_metrics_flow() -> None:
 
         create_payload = {
             "input_payload": '{"token":"abc123","task":"demo"}',
-            "initial_task_type": "triage",
+            "initial_task_type": "analysis",
             "initial_task_payload": '{"password":"top-secret"}',
             "idempotency_key": "exec-key-001",
             "timeout_seconds": 600,
@@ -285,6 +299,63 @@ def test_runtime_human_approval_expire_and_review() -> None:
             json={"status": "approved"},
         )
         assert review_expired.status_code == 400
+
+
+def test_m25_blocks_patient_identifiers_for_external_llms_and_gates_high_impact_work() -> None:
+    for client, session_factory in _build_client():
+        _publish_version(client)
+
+        denied = client.post(
+            f"/api/v1/agent-runtime/agents/{AGENT_ID}/executions",
+            headers=_auth_headers(OWNER_ID, ORG_ID),
+            json={
+                "initial_task_type": "reporting",
+                "input_payload": '{"patient_id":"P-12345","summary":"follow-up"}',
+            },
+        )
+        assert denied.status_code == 400
+        assert "External LLM execution is denied" in denied.json()["detail"]
+
+        created = client.post(
+            f"/api/v1/agent-runtime/agents/{AGENT_ID}/executions",
+            headers=_auth_headers(OWNER_ID, ORG_ID),
+            json={"initial_task_type": "clinical_triage"},
+        )
+        assert created.status_code == 201
+        execution_id = created.json()["id"]
+        assert created.json()["status"] == "waiting_approval"
+
+        bypass = client.patch(
+            f"/api/v1/agent-runtime/executions/{execution_id}/status",
+            headers=_auth_headers(OWNER_ID, ORG_ID),
+            json={"status": "running"},
+        )
+        assert bypass.status_code == 400
+
+        with session_factory() as db:
+            approval = db.query(AgentExecutionApproval).filter_by(execution_id=execution_id).one()
+            approval_id = approval.id
+
+        self_review = client.patch(
+            f"/api/v1/agent-runtime/approvals/{approval_id}",
+            headers=_auth_headers(OWNER_ID, ORG_ID),
+            json={"status": "approved"},
+        )
+        assert self_review.status_code == 400
+
+        approved = client.patch(
+            f"/api/v1/agent-runtime/approvals/{approval_id}",
+            headers=_auth_headers(ADMIN_ID, ORG_ID, role="admin"),
+            json={"status": "approved", "comment": "Reviewed by a separate authorized user."},
+        )
+        assert approved.status_code == 200
+
+        running = client.patch(
+            f"/api/v1/agent-runtime/executions/{execution_id}/status",
+            headers=_auth_headers(OWNER_ID, ORG_ID),
+            json={"status": "running"},
+        )
+        assert running.status_code == 200
 
 
 def test_runtime_security_scope_and_permissions() -> None:
