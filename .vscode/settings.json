@@ -1,0 +1,5 @@
+{
+  "editor.formatOnSave": true,
+  "files.eol": "\n",
+  "python.analysis.typeCheckingMode": "basic"
+}
