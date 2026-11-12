@@ -1,18 +1,18 @@
-# Healthcare AI Desk — M1.1
+# Healthcare AI Desk — M1.3 Security Foundation
 
 Local-first starter repository for Windows 10 + Docker Desktop + VS Code.
 
-## Included
+## Included (current baseline)
 - FastAPI backend with `/api/v1/health` and `/api/v1/ready`
 - React + Vite + Tailwind CSS v4 starter UI
-- MySQL 8.4 and Redis 7
+- MySQL 8.4 and Redis 7 (localhost-bound host ports)
 - Docker Compose development environment
-- PowerShell setup and verification scripts
-- VS Code workspace recommendations
-
-> M1.1 is infrastructure scaffolding only. Authentication, organization/project modules,
-> database migrations, agent orchestration, and clinical workflows are not implemented yet.
-> No tests are claimed to have passed. Run the verification steps below on your computer.
+- PowerShell verification scripts (`verify.ps1`, `diagnose-api.ps1`)
+- SQLAlchemy + Alembic migration chain through `20261112_0006`
+- Organization isolation guardrails (`X-Organization-Id`)
+- Authentication foundation: Email/Password (Argon2id) + JWT access + refresh token rotation/revocation
+- RBAC foundation: `owner`, `admin`, `manager`, `member`, `viewer`
+- Agent Management database foundation linked to organization scope
 
 ## Prerequisites
 1. Windows 10 64-bit.
@@ -89,6 +89,39 @@ Healthcare AI Desk uses:
 - Organization-scoped token policy (refresh tokens tied to organization and revoked by scope)
 - RBAC permission guard foundation (`owner`, `admin`, `manager`, `member`, `viewer`)
 
+## Agent Management database foundation
+
+Agent Management schema now includes:
+- `agent_profiles` (organization-scoped agent registry)
+- `agent_project_assignments` (organization-scoped assignment of agents to projects)
+- Composite organization constraints to enforce same-organization agent/project linkage
+- RBAC permissions for agent operations (`agent.read`, `agent.write`, `agent.assign`)
+
+M2.1 now adds:
+- Agent Registry CRUD endpoints:
+  - `POST /api/v1/agents`
+  - `GET /api/v1/agents`
+  - `GET /api/v1/agents/{agent_id}`
+  - `PATCH /api/v1/agents/{agent_id}`
+- Organization-scoped query/mutation guards on all `/agents` operations
+- Endpoint tests for CRUD + org/RBAC denial paths
+
+## Documentation map
+- `docs/M0.0_MASTER_PROJECT.md`
+- `docs/M0.1_ADDITIONAL_PROJECT_DOCS.md`
+- `docs/M1.1_IMPLEMENTATION_NOTES.md`
+- `docs/M1.1_API_LIVENESS_TROUBLESHOOTING.md`
+- `docs/M1.2.1_DATABASE_FOUNDATION.md`
+- `docs/M1.2.2_CORE_BUSINESS_SCHEMA.md`
+- `docs/M1.2.3_SCHEMA_HARDENING.md`
+- `docs/M1.3_AUTH_RBAC_ARCHITECTURE.md`
+- `docs/M1.4_AGENT_MANAGEMENT_DATABASE_FOUNDATION.md`
+- `docs/M2_AGENT_MANAGEMENT_REGISTRY.md`
+- `docs/M2.1_AGENT_REGISTRY_FOUNDATION.md`
+- `docs/M2.2_AGENT_REGISTRY_SECURITY_INTEGRATION.md`
+- `docs/M2.3_AGENT_PROJECT_ASSIGNMENT_WORKFLOWS.md`
+- `docs/M2.4_AGENT_REGISTRY_AUDIT_AND_ACCEPTANCE.md`
+
 ## Useful commands
 
 ```powershell
@@ -110,8 +143,13 @@ docker compose up -d --build
 - Browser API requests use `/api` through the Vite proxy. Do not use `http://api:8000` in browser code.
 - For slow Windows bind mounts, keep the repository inside the WSL2 Linux filesystem.
 
-## M1.1 boundaries
-This milestone does not yet provide user accounts/JWT, Alembic migrations, organization/project CRUD,
-agent registry/group chat, patient record storage, or clinical decision support.
+## Current boundaries (post-M2.1)
+This baseline still does not yet provide:
+- Agent-to-project assignment APIs (M2.3) and audit workflows (M2.4)
+- Multi-agent group chat orchestration
+- Human approval workflow engine
+- Shared organizational memory and healthcare RAG stack
+- Full clinical workflow modules (MNCH workflow automation, reporting pipelines)
+- Production deployment hardening and SRE controls
 
 Do not enter real patient-identifiable or confidential healthcare data into this starter.

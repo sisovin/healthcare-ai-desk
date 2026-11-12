@@ -5,6 +5,9 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
     "owner": {
         "organization.read",
         "organization.manage_members",
+        "agent.read",
+        "agent.write",
+        "agent.assign",
         "project.read",
         "project.write",
         "project.manage_members",
@@ -13,6 +16,9 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
     "admin": {
         "organization.read",
         "organization.manage_members",
+        "agent.read",
+        "agent.write",
+        "agent.assign",
         "project.read",
         "project.write",
         "project.manage_members",
@@ -20,17 +26,22 @@ ROLE_PERMISSIONS: dict[str, set[str]] = {
     },
     "manager": {
         "organization.read",
+        "agent.read",
+        "agent.write",
+        "agent.assign",
         "project.read",
         "project.write",
         "project.manage_members",
     },
     "member": {
         "organization.read",
+        "agent.read",
         "project.read",
         "project.write",
     },
     "viewer": {
         "organization.read",
+        "agent.read",
         "project.read",
     },
 }

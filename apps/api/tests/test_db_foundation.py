@@ -44,6 +44,8 @@ def test_metadata_can_create_schema_on_sqlite() -> None:
         "projects",
         "organization_memberships",
         "patient_records",
+        "agent_profiles",
+        "agent_project_assignments",
     }.issubset(table_names)
 
 
