@@ -64,6 +64,31 @@ docker compose exec -T api python -m pytest -q tests
 
 Do not run `docker compose down -v` unless you intentionally want to remove database/cache data.
 
+## M1.2 database foundation
+
+API now includes:
+- SQLAlchemy engine/session lifecycle
+- Initial declarative model (`system_settings`)
+- Alembic migration scaffold and versioned migrations (`20261112_0001`, `20261112_0002`, `20261112_0003`, `20261112_0004`, `20261112_0005`)
+- Core business schema tables (`organizations`, `users`, `projects`, `organization_memberships`, `patient_records`)
+- Organization isolation guardrails (`X-Organization-Id` context validation + cross-org access denial)
+- Extended automated tests for schema and DB helpers
+
+Run migration:
+```powershell
+docker compose exec -T api alembic upgrade head
+```
+
+## M1.3 authentication decision
+
+Healthcare AI Desk uses:
+- Email + Password
+- Argon2id password hashing
+- JWT access tokens
+- Refresh tokens with rotation/revocation stored as token hashes in database
+- Organization-scoped token policy (refresh tokens tied to organization and revoked by scope)
+- RBAC permission guard foundation (`owner`, `admin`, `manager`, `member`, `viewer`)
+
 ## Useful commands
 
 ```powershell

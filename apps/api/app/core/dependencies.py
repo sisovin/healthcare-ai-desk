@@ -1,83 +1,25 @@
 from collections.abc import Generator
 from contextlib import contextmanager
-from urllib.parse import unquote
 
+import jwt
 import pymysql
+from fastapi import Depends, Header, HTTPException, Request, status
 from redis import Redis
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
-
-
-def _parse_mysql_url(database_url: str) -> tuple[str, int, str, str, str]:
-    normalized_url = database_url.replace("mysql+pymysql://", "mysql://", 1)
-    scheme = "mysql://"
-    if not normalized_url.startswith(scheme):
-        raise ValueError("DATABASE_URL must start with mysql:// or mysql+pymysql://")
-
-    remainder = normalized_url[len(scheme) :]
-    if "@" not in remainder:
-        raise ValueError("DATABASE_URL must include credentials and host")
-
-    auth_part, location_part = remainder.rsplit("@", 1)
-    if "/" not in location_part:
-        raise ValueError("DATABASE_URL must include a database name")
-
-    host_port_part, database_name = location_part.split("/", 1)
-    if not host_port_part:
-        raise ValueError("DATABASE_URL host is missing")
-
-    host = host_port_part
-    port = 3306
-
-    if host_port_part.startswith("["):
-        closing_bracket = host_port_part.find("]")
-        if closing_bracket == -1:
-            raise ValueError("Invalid IPv6 host format in DATABASE_URL")
-        host = host_port_part[1:closing_bracket]
-        trailing = host_port_part[closing_bracket + 1 :]
-        if trailing:
-            if not trailing.startswith(":"):
-                raise ValueError("Invalid IPv6 host/port format in DATABASE_URL")
-            port = int(trailing[1:])
-    elif ":" in host_port_part:
-        host, port_part = host_port_part.rsplit(":", 1)
-        port = int(port_part)
-
-    if ":" in auth_part:
-        username, password = auth_part.split(":", 1)
-    else:
-        username, password = auth_part, ""
-
-    return host, port, unquote(username), unquote(password), database_name
-
-
-def _parse_redis_url(redis_url: str) -> tuple[str, int, int, str]:
-    scheme = "redis://"
-    if not redis_url.startswith(scheme):
-        raise ValueError("REDIS_URL must start with redis://")
-
-    remainder = redis_url[len(scheme) :]
-    auth_and_host, db_part = remainder.rsplit("/", 1) if "/" in remainder else (remainder, "0")
-
-    password = ""
-    host_port_part = auth_and_host
-    if "@" in auth_and_host:
-        auth_part, host_port_part = auth_and_host.rsplit("@", 1)
-        password = unquote(auth_part.lstrip(":"))
-
-    host = host_port_part or "redis"
-    port = 6379
-    if ":" in host_port_part:
-        host, port_part = host_port_part.rsplit(":", 1)
-        port = int(port_part)
-
-    db = int(db_part) if db_part else 0
-    return host or "redis", port, db, password
+from app.core.organization_isolation import OrganizationContext, get_organization_context_from_request
+from app.core.rbac import AccessContext, has_permission
+from app.core.security import decode_access_token
+from app.core.url_parsers import parse_mysql_url, parse_redis_url
+from app.db.session import SessionLocal
+from app.models import OrganizationMembership, User
 
 
 @contextmanager
 def get_mysql_connection() -> Generator:
-    host, port, user, password, database = _parse_mysql_url(settings.database_url)
+    host, port, user, password, database = parse_mysql_url(settings.database_url)
     connection = pymysql.connect(
         host=host or "mysql",
         port=port,
@@ -96,7 +38,7 @@ def get_mysql_connection() -> Generator:
 
 
 def get_redis_client() -> Redis:
-    host, port, db, password = _parse_redis_url(settings.redis_url)
+    host, port, db, password = parse_redis_url(settings.redis_url)
     return Redis(
         host=host,
         port=port,
@@ -105,3 +47,64 @@ def get_redis_client() -> Redis:
         socket_connect_timeout=3,
         socket_timeout=3,
     )
+
+
+def get_db_session() -> Generator[Session, None, None]:
+    session = SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+def get_organization_context(
+    request: Request,
+    db: Session = Depends(get_db_session),
+) -> OrganizationContext:
+    return get_organization_context_from_request(request, db)
+
+
+def get_access_context(
+    organization_context: OrganizationContext = Depends(get_organization_context),
+    authorization: str | None = Header(default=None),
+    db: Session = Depends(get_db_session),
+) -> AccessContext:
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token.")
+
+    token = authorization.split(" ", 1)[1]
+    try:
+        claims = decode_access_token(token)
+    except jwt.InvalidTokenError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token.") from exc
+
+    if claims["org"] != organization_context.organization_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Token organization scope mismatch.")
+
+    user = db.get(User, claims["sub"])
+    if user is None or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token.")
+
+    membership = db.execute(
+        select(OrganizationMembership).where(
+            OrganizationMembership.user_id == user.id,
+            OrganizationMembership.organization_id == organization_context.organization_id,
+        )
+    ).scalar_one_or_none()
+    if membership is None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User is not a member of this organization.")
+
+    return AccessContext(
+        user_id=user.id,
+        organization_id=organization_context.organization_id,
+        role=membership.role,
+    )
+
+
+def require_permission(permission: str):
+    def _guard(access_context: AccessContext = Depends(get_access_context)) -> AccessContext:
+        if not has_permission(access_context.role, permission):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions.")
+        return access_context
+
+    return _guard

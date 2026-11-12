@@ -1,5 +1,3 @@
-from contextlib import contextmanager
-
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -7,28 +5,6 @@ from app.api.v1 import health as health_module
 
 
 client = TestClient(app)
-
-
-class _DummyCursor:
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc, tb):
-        return False
-
-    def execute(self, _query: str) -> None:
-        return None
-
-    def fetchone(self):
-        return (1,)
-
-
-class _DummyMySQLConnection:
-    def cursor(self):
-        return _DummyCursor()
-
-    def close(self) -> None:
-        return None
 
 
 class _DummyRedisClient:
@@ -54,11 +30,7 @@ def test_root_returns_expected_links() -> None:
 
 
 def test_readiness_returns_ready_when_dependencies_ok(monkeypatch) -> None:
-    @contextmanager
-    def _mysql_ok():
-        yield _DummyMySQLConnection()
-
-    monkeypatch.setattr(health_module, "get_mysql_connection", _mysql_ok)
+    monkeypatch.setattr(health_module, "check_database_connection", lambda: None)
     monkeypatch.setattr(health_module, "get_redis_client", lambda: _DummyRedisClient())
 
     response = client.get("/api/v1/ready")
@@ -67,12 +39,10 @@ def test_readiness_returns_ready_when_dependencies_ok(monkeypatch) -> None:
 
 
 def test_readiness_returns_503_when_mysql_fails(monkeypatch) -> None:
-    @contextmanager
-    def _mysql_error():
+    def _mysql_error() -> None:
         raise RuntimeError("db down")
-        yield  # pragma: no cover
 
-    monkeypatch.setattr(health_module, "get_mysql_connection", _mysql_error)
+    monkeypatch.setattr(health_module, "check_database_connection", _mysql_error)
     monkeypatch.setattr(health_module, "get_redis_client", lambda: _DummyRedisClient())
 
     response = client.get("/api/v1/ready")
@@ -88,11 +58,7 @@ def test_readiness_returns_503_when_redis_fails(monkeypatch) -> None:
         def ping(self) -> bool:
             raise RuntimeError("redis down")
 
-    @contextmanager
-    def _mysql_ok():
-        yield _DummyMySQLConnection()
-
-    monkeypatch.setattr(health_module, "get_mysql_connection", _mysql_ok)
+    monkeypatch.setattr(health_module, "check_database_connection", lambda: None)
     monkeypatch.setattr(health_module, "get_redis_client", lambda: _FailingRedisClient())
 
     response = client.get("/api/v1/ready")

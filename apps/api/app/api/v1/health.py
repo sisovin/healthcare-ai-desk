@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException
-import pymysql
 from redis.exceptions import RedisError
 
-from app.core.dependencies import get_mysql_connection, get_redis_client
+from app.core.dependencies import get_redis_client
+from app.db.session import check_database_connection
 
 router = APIRouter(tags=["health"])
 
@@ -19,11 +19,8 @@ def readiness() -> dict:
     checks = {"mysql": "unknown", "redis": "unknown"}
 
     try:
-        with get_mysql_connection() as connection:
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT 1")
-                cursor.fetchone()
-            checks["mysql"] = "ok"
+        check_database_connection()
+        checks["mysql"] = "ok"
     except Exception as exc:
         checks["mysql"] = f"error: {type(exc).__name__}"
 
