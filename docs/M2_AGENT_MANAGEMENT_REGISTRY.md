@@ -19,8 +19,8 @@ Deliver secure, organization-scoped Agent Management and Registry capabilities o
 ## Milestone breakdown
 - M2.1: Registry domain contracts and CRUD foundations.
 - M2.2: Organization-scoped API + RBAC guard wiring.
-- M2.3: Assignment workflows and conflict-safe constraints.
-- M2.4: Audit, operational controls, and acceptance validation.
+- M2.3: Agent runtime engine (published versions, lifecycle, task queue, audit logs, human approval).
+- M2.4: Runtime reliability and observability hardening.
 
 ## Out of scope for M2
 - Multi-agent runtime orchestration/group chat execution engine.
@@ -33,3 +33,7 @@ Deliver secure, organization-scoped Agent Management and Registry capabilities o
 - No cross-organization read/write/assignment path is possible.
 - All write paths require explicit RBAC permission checks.
 - API and integration tests validate both success and denial paths.
+
+## Recommended next roadmap
+1. M2.5 — LLM Provider Gateway & Agent Tool Execution
+2. M3.0 — Supervisor Agent & Multi-Agent Group Chat

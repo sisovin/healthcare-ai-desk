@@ -46,6 +46,11 @@ def test_metadata_can_create_schema_on_sqlite() -> None:
         "patient_records",
         "agent_profiles",
         "agent_project_assignments",
+        "agent_versions",
+        "agent_executions",
+        "agent_execution_tasks",
+        "agent_execution_audit_logs",
+        "agent_execution_approvals",
     }.issubset(table_names)
 
 

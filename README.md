@@ -110,6 +110,21 @@ M2.2 now hardens:
 - Security integration coverage for malformed org header, token-org mismatch, non-member denial, and write-permission denial.
 - Compatibility constraints: no API route removal, no migration reset, no destructive data operations.
 
+M2.3 now adds:
+- Published agent versions and snapshot history (`agent_versions`)
+- Runtime execution lifecycle (`agent_executions`)
+- Execution task queue (`agent_execution_tasks`)
+- Runtime audit logs (`agent_execution_audit_logs`)
+- Human approval flow (`agent_execution_approvals`)
+- Runtime APIs under `/api/v1/agent-runtime/*`
+
+M2.4 now hardens:
+- Lifecycle normalization to `succeeded` with compatibility handling for legacy `completed`.
+- Idempotency, retry policy, timeout policy, and duplicate execution protection.
+- Dependency-aware/scheduled task orchestration with next-ready selection.
+- Approval expiry handling and runtime metrics endpoint.
+- Secret redaction for sensitive payload keys in runtime/audit records.
+
 ## Documentation map
 - `docs/M0.0_MASTER_PROJECT.md`
 - `docs/M0.1_ADDITIONAL_PROJECT_DOCS.md`
@@ -147,9 +162,9 @@ docker compose up -d --build
 - Browser API requests use `/api` through the Vite proxy. Do not use `http://api:8000` in browser code.
 - For slow Windows bind mounts, keep the repository inside the WSL2 Linux filesystem.
 
-## Current boundaries (post-M2.2)
+## Current boundaries (post-M2.4)
 This baseline still does not yet provide:
-- Agent-to-project assignment APIs (M2.3) and audit workflows (M2.4)
+- LLM provider gateway and tool execution routing (M2.5)
 - Multi-agent group chat orchestration
 - Human approval workflow engine
 - Shared organizational memory and healthcare RAG stack
