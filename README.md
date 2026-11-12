@@ -106,6 +106,10 @@ M2.1 now adds:
 - Organization-scoped query/mutation guards on all `/agents` operations
 - Endpoint tests for CRUD + org/RBAC denial paths
 
+M2.2 now hardens:
+- Security integration coverage for malformed org header, token-org mismatch, non-member denial, and write-permission denial.
+- Compatibility constraints: no API route removal, no migration reset, no destructive data operations.
+
 ## Documentation map
 - `docs/M0.0_MASTER_PROJECT.md`
 - `docs/M0.1_ADDITIONAL_PROJECT_DOCS.md`
@@ -143,7 +147,7 @@ docker compose up -d --build
 - Browser API requests use `/api` through the Vite proxy. Do not use `http://api:8000` in browser code.
 - For slow Windows bind mounts, keep the repository inside the WSL2 Linux filesystem.
 
-## Current boundaries (post-M2.1)
+## Current boundaries (post-M2.2)
 This baseline still does not yet provide:
 - Agent-to-project assignment APIs (M2.3) and audit workflows (M2.4)
 - Multi-agent group chat orchestration
