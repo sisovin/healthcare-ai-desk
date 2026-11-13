@@ -1,0 +1,23 @@
+{
+  "checked_at_utc": "2026-11-13T02:44:02.5815860Z",
+  "results": [
+    {
+      "command": "python -m py_compile tools/recovery/m321_step_journal.py tests/recovery/test_m321_step_journal.py tests/recovery/test_m322_architecture_contract_review.py",
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "command": "python -m pytest -q -p no:cacheprovider tests/recovery/test_m321_step_journal.py tests/recovery/test_m322_architecture_contract_review.py",
+      "exit_code": 0,
+      "stdout": ".......................                                                  [100%]\n23 passed in 0.18s\n",
+      "stderr": ""
+    },
+    {
+      "command": "python -m pytest -q -p no:cacheprovider --basetemp .offline-test-tmp-20261113 tests/recovery",
+      "exit_code": 1,
+      "stdout": "50 passed, 1 skipped, 10 errors before session finish; not an acceptance result.",
+      "stderr": "Windows sandbox returned WinError 5 while pytest accessed its configured base temporary directory. No database, Docker, Alembic, Redis, writer, or worker operation was attempted."
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "schema_version": 4,
+  "milestone": "M3.2.1 Phase A.2 / M3.2.2 Revision 3",
+  "generated_at_utc": "2026-11-13T02:44:02.5815860Z",
+  "purpose": "Review-only SHA-256 manifest. It confers no execution authority.",
+  "execution_authorization": false,
+  "files": {
+    "README_REVIEW_ONLY.md": "67279039180c1ec96c31d2abc7d40d408bfe061faec2b029cdd50b07fded9cb0",
+    "docs/M3.2.1_PHASE_A2_DISPOSABLE_REHEARSAL_AUTHORIZATION_PROPOSAL.md": "dd642c6f5f53056c559622b3320da1b85b28825ed1f5e635562546055ba66d31",
+    "docs/M3.2.1_PHASE_A2_JOURNAL_REVISION_3_REVIEW_SUBMISSION.md": "98179f007df1bb48e905dc3d02ed75989b655d9ca96d2582af28fef496410ceb",
+    "docs/M3.2.2_AGENT_TO_AGENT_EVENT_ROUTING_ARCHITECTURE_AND_IMPLEMENTATION_PACKAGE.md": "6ddbad6e92a26611a10f60a40897a26457b6cc1e0a67b31ee73174e06d2ba0eb",
+    "docs/M3.2.2_REVISION_1_AND_M3.2.1_JOURNAL_HARDENING_REVIEW_SUBMISSION.md": "ca19a7f6f9afbc7c1d94d4e26a0aff8db980917fd8dc3b48c9f568909e79222a",
+    "docs/M3.2.2_REVISION_2_M321_JOURNAL_P0_REMEDIATION_REVIEW_SUBMISSION.md": "faa367adebcc5d8b0a8ffc2c94b6002a7b477b4733cc0f794c4a3a37ed4edb3d",
+    "evidence/20261112_0012_protocol_message_contract.py": "c78ed2aba4a0f95876d72bb35ee231747d066c86d8b582b5890f8d33f7b94e83",
+    "evidence/offline_static_checks.json": "96abb2faaf58cd4a3969f4e1313b6ee118d6e89b3f4cbcab609c8a66349dffb1",
+    "pytest.ini": "64daccf5ad26f6c991cb181faf38e2df342202dd9cd34b67421f8a74ad2d2cfc",
+    "tests/recovery/test_m321_forward_recovery.py": "033ce969b417eff29a2b1e2dd2a4a56963e60c2ce5861ef57b8c3f69216b44aa",
+    "tests/recovery/test_m321_prepared_journal_review_only.py": "b9d1832377fca276c533061f8b3af7ade1c614bc9df78090dec0cfc378e43799",
+    "tests/recovery/test_m321_step_journal.py": "4a87b33f88ac3f779a767b6ae96f71d283f132fd5fdc4a3713812b6fc3eee475",
+    "tests/recovery/test_m322_architecture_contract_review.py": "58fe01adc595de0587545b611e54bea93f72102c6f9ba5c97a2451ad3090e5db",
+    "tools/recovery/m321_forward_recovery.py": "4771be0376c49e61e7bddd0e235032b88d69088fa2d76d6d292c550e5bb4a1c8",
+    "tools/recovery/m321_forward_recovery.sql": "bc9c84f0110a47ec4446681f66348231af1d5b4a1cb79464f476dc387ea85f53",
+    "tools/recovery/m321_step_journal.py": "cd0936302fe1c4c1ec407b7d11b5405cd5820d1e05d1b4c577ebe8f96ee4f0d0",
+    "tools/recovery/m321_step_journal_contract.md": "d9f8fd0d618e42c799a385f038bd0b8d2a73dfa7f3e5abd90e144fa0e7b5fcaf"
+  }
+}
