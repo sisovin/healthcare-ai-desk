@@ -7,11 +7,11 @@ separate acceptance gates.
 **Safety boundary:** M2.5 is the sole authority for high-impact approval and
 external-LLM egress policy.
 
-**M4.1 Revision 3:** Detailed retrieval authorization, revocation fencing,
-atomic egress-attempt semantics, protected preprocessing, exact index
-generation activation, governance requirements, and source provenance are
-defined in
-[`M4.1_SECURITY_AND_ARCHITECTURE_CONTRACT_REVISION_3.md`](M4.1_SECURITY_AND_ARCHITECTURE_CONTRACT_REVISION_3.md).
+**M4.1 Revision 4:** Detailed retrieval authorization, revocation fencing,
+atomic egress-attempt recovery, protected preprocessing, exact index
+generation activation, physical index readiness, governance requirements, and
+source provenance are defined in
+[`M4.1_SECURITY_AND_ARCHITECTURE_CONTRACT_REVISION_4.md`](M4.1_SECURITY_AND_ARCHITECTURE_CONTRACT_REVISION_4.md).
 
 ## 1. Purpose
 
