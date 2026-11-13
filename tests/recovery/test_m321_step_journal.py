@@ -308,12 +308,64 @@ def test_reconciliation_rejects_wrong_prior_owner_or_step():
         )
 
 
+def test_reconciliation_requires_a_strictly_later_ownership_epoch_on_creation_and_reload():
+    state = _journal()
+    prior_owner = {"epoch": 5, "instance_id": "writer-a", "run_nonce": "nonce-a"}
+    prepared_kwargs = _prepare_kwargs()
+    prepared_kwargs["ownership"] = copy.deepcopy(prior_owner)
+    prepared = j.prepare_step(state, **prepared_kwargs)
+    lower_owner = {"epoch": 4, "instance_id": "writer-b", "run_nonce": "nonce-b"}
+    authorization = _reconciliation_authorization(prepared["step_id"], prior_owner)
+    with pytest.raises(j.JournalViolation, match="increase monotonically"):
+        j.reconcile_prepared(
+            state,
+            reconciliation_authorization=authorization,
+            observed_reconciliation=_observed("reviewed orphan state"),
+            ownership=lower_owner,
+        )
+
+    later_owner = {"epoch": 6, "instance_id": "writer-b", "run_nonce": "nonce-b"}
+    j.reconcile_prepared(
+        state,
+        reconciliation_authorization=authorization,
+        observed_reconciliation=_observed("reviewed orphan state"),
+        ownership=later_owner,
+    )
+    forged = copy.deepcopy(state)
+    forged["steps"][-1]["ownership"]["epoch"] = 4
+    with pytest.raises(j.JournalViolation, match="increase monotonically"):
+        j._validate_journal_state(j.seal_journal(forged))
+
+
 def test_windows_lock_uses_fixed_byte_file_and_metadata_sidecar_not_append_mode():
     source = SOURCE.read_text(encoding="utf-8")
     assert 'open("a+b")' not in source
     assert 'open("x+b")' in source
     assert 'open("r+b")' in source
     assert ".lock.meta" in source
+
+
+def test_existing_lock_without_metadata_fails_closed_and_releases_handle(monkeypatch):
+    class FakeHandle:
+        closed = False
+
+        def close(self):
+            self.closed = True
+
+    lock = j.JournalFileLock(
+        Path("review-only-journal.json"), rehearsal_id="review-only-fixture",
+        instance_id="writer-a", run_nonce="nonce-a",
+    )
+    handle, events = FakeHandle(), []
+    monkeypatch.setattr(lock, "_open_fixed_lock_byte", lambda: (handle, False))
+    monkeypatch.setattr(lock, "_lock_os_handle", lambda _handle: events.append("lock"))
+    monkeypatch.setattr(lock, "_unlock_os_handle", lambda _handle: events.append("unlock"))
+    monkeypatch.setattr(lock, "_read_metadata", lambda: None)
+    with pytest.raises(j.JournalViolation, match="lacks metadata"):
+        lock.acquire()
+    assert events == ["lock", "unlock"]
+    assert handle.closed is True
+    assert lock._handle is None
 
 
 def test_windows_lock_byte_and_json_sidecar_are_separate_in_simulation(monkeypatch):

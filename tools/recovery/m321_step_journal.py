@@ -224,6 +224,8 @@ def _validate_reconciliation_record(record: dict[str, Any], prepared: dict[str, 
     _validate_ownership(record.get("ownership"), "Reconciliation")
     if _same_ownership(record["ownership"], prior):
         raise JournalViolation("Reconciliation must establish a new ownership epoch")
+    if record["ownership"]["epoch"] <= prior["epoch"]:
+        raise JournalViolation("Reconciliation ownership epoch must increase monotonically")
     _validate_reconciliation_authorization(
         record.get("reconciliation_authorization"),
         prepared_step_id=prepared["step_id"],
@@ -341,6 +343,8 @@ def reconcile_prepared(
     _validate_ownership(ownership, "Reconciliation")
     if _same_ownership(ownership, prior_ownership):
         raise JournalViolation("Reconciliation requires a distinct ownership epoch")
+    if ownership["epoch"] <= prior_ownership["epoch"]:
+        raise JournalViolation("Reconciliation ownership epoch must increase monotonically")
     _validate_reconciliation_authorization(
         reconciliation_authorization,
         prepared_step_id=prepared["step_id"],
@@ -486,14 +490,14 @@ class JournalFileLock:
             import fcntl
             fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
 
-    def _open_fixed_lock_byte(self) -> Any:
+    def _open_fixed_lock_byte(self) -> tuple[Any, bool]:
         """Create/open one lock byte without append-mode metadata corruption."""
         if self.lock_path.is_symlink() or self.metadata_path.is_symlink():
             raise JournalViolation("Journal lock path substitution is refused")
         try:
-            return self.lock_path.open("x+b")
+            return self.lock_path.open("x+b"), True
         except FileExistsError:
-            return self.lock_path.open("r+b")
+            return self.lock_path.open("r+b"), False
 
     def _read_metadata(self) -> dict[str, Any] | None:
         if not self.metadata_path.exists():
@@ -521,10 +525,12 @@ class JournalFileLock:
         os_locked = False
         try:
             self.lock_path.parent.mkdir(parents=True, exist_ok=True)
-            handle = self._open_fixed_lock_byte()
+            handle, created = self._open_fixed_lock_byte()
             self._lock_os_handle(handle)
             os_locked = True
             previous = self._read_metadata()
+            if not created and previous is None:
+                raise JournalViolation("Existing journal lock lacks metadata; independent review is required")
             if previous is not None and previous.get("state") != "released":
                 raise JournalViolation("Ambiguous or stale journal lock requires independent review")
             self._write_metadata("held")

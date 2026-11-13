@@ -33,9 +33,9 @@ Only a reconciliation-only mutation may append `RECONCILED` for that exact
 prepared step. It must include a structured independent authorization with the
 prepared step ID, exact prior ownership, reviewer identity, approval
 reference, SHA-256 evidence reference, and passing observed reconciliation
-assertions. The new owner must have a later epoch, and any later outcome must
-name that reconciled owner. These links are revalidated before persistence and
-on reload.
+assertions. The new owner epoch must be strictly greater than the prior epoch,
+and any later outcome must name that reconciled owner. These links are
+revalidated during reconciliation creation, before persistence, and on reload.
 
 `RECONCILED` records evidence only; it never executes or retries SQL. This
 module cannot prove that an external reviewer is genuine. A future separately
@@ -69,4 +69,6 @@ written to the separate `.lock.meta` sidecar. It also checks non-append lock
 open modes. This is not evidence of native multi-process contention, crash
 leftovers, power-loss behavior, antivirus interference, or Windows filesystem
 durability. Those remain separately authorized disposable-environment work.
-Ambiguous or stale `held` metadata must never be broken automatically.
+An existing fixed-byte lock file with no `.lock.meta` is also ambiguous and is
+rejected. Ambiguous or stale `held` metadata must never be broken
+automatically.
