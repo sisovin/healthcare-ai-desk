@@ -43,6 +43,12 @@ authorized runner must validate the external authority before requesting
 reconciliation. A matching original instance/run nonce may finish its own
 persisted step; every other identity requires reconciliation.
 
+Every later `PREPARED` record must also have an ownership epoch strictly
+greater than every prior `PREPARED` or `RECONCILED` record in the journal.
+This is enforced when constructing a new prepared record and again during
+full-history validation before persistence or reload. A historical decrease is
+rejected even if each individual lifecycle record is otherwise well formed.
+
 ## Persistence and integrity
 
 The journal uses canonical JSON and SHA-256 integrity metadata. Each mutation is built in an immutable candidate copy; persistence writes and fsyncs a same-directory temporary file, atomically replaces the target, then reloads and verifies the sealed journal while the exclusive lock remains held. The in-memory session is replaced only after that verification succeeds.
@@ -72,3 +78,9 @@ durability. Those remain separately authorized disposable-environment work.
 An existing fixed-byte lock file with no `.lock.meta` is also ambiguous and is
 rejected. Ambiguous or stale `held` metadata must never be broken
 automatically.
+
+The file-backed offline journal tests do not use pytest's `tmp_path` or create
+child temporary directories. They use UUID-scoped flat files under an explicit
+local-only temporary root. Set `HAD_OFFLINE_TEST_TMP` when the default Windows
+TEMP policy is restricted. This is test-harness isolation only; it does not
+select or create infrastructure.

@@ -337,6 +337,34 @@ def test_reconciliation_requires_a_strictly_later_ownership_epoch_on_creation_an
         j._validate_journal_state(j.seal_journal(forged))
 
 
+def test_subsequent_prepared_epoch_must_exceed_all_historical_ownership_epochs():
+    state = _journal()
+    owner_five = {"epoch": 5, "instance_id": "writer-a", "run_nonce": "nonce-a"}
+    first_kwargs = _prepare_kwargs()
+    first_kwargs["ownership"] = copy.deepcopy(owner_five)
+    first = j.prepare_step(state, **first_kwargs)
+    first_pass = _pass_kwargs(first["step_id"])
+    first_pass["ownership"] = copy.deepcopy(owner_five)
+    j.record_pass(state, **first_pass)
+
+    lower_kwargs = _prepare_kwargs()
+    lower_kwargs["ownership"] = {"epoch": 2, "instance_id": "writer-b", "run_nonce": "nonce-b"}
+    with pytest.raises(j.JournalViolation, match="Prepared ownership epoch must increase"):
+        j.prepare_step(state, **lower_kwargs)
+
+    forged = copy.deepcopy(state)
+    forged["steps"].append({
+        **lower_kwargs,
+        "recorded_at_utc": j.utc_now(),
+        "status": j.PREPARED,
+        "statement_sha256": j.statement_fingerprint(lower_kwargs["statement"]),
+    })
+    forged["steps"][-1].pop("statement")
+    forged["status"] = j.PREPARED
+    with pytest.raises(j.JournalViolation, match="epochs must increase"):
+        j._validate_journal_state(j.seal_journal(forged))
+
+
 def test_windows_lock_uses_fixed_byte_file_and_metadata_sidecar_not_append_mode():
     source = SOURCE.read_text(encoding="utf-8")
     assert 'open("a+b")' not in source

@@ -259,6 +259,8 @@ def prepare_step(
     _validate_observed(observed_preconditions, "Prepared observed preconditions", all_passed=True)
     _require_sha256(before_schema_snapshot_sha256, "Prepared before snapshot")
     _validate_ownership(ownership, "Prepared")
+    if ownership["epoch"] <= _latest_ownership_epoch(journal):
+        raise JournalViolation("Prepared ownership epoch must increase monotonically")
     record = {
         "recorded_at_utc": utc_now(), "status": PREPARED, "step_id": step_id,
         "statement_sha256": statement_fingerprint(statement), "preconditions": preconditions,
@@ -422,8 +424,14 @@ def _validate_journal_state(journal: dict[str, Any]) -> None:
         raise JournalViolation("Journal status is invalid")
     unresolved: dict[str, Any] | None = None
     reconciliation: dict[str, Any] | None = None
+    highest_ownership_epoch = 0
     for index, record in enumerate(steps):
         unresolved, reconciliation = _validate_step(record, index, len(steps), unresolved, reconciliation)
+        if record["status"] in {PREPARED, RECONCILED}:
+            epoch = record["ownership"]["epoch"]
+            if epoch <= highest_ownership_epoch:
+                raise JournalViolation("Journal ownership epochs must increase monotonically")
+            highest_ownership_epoch = epoch
     if status == PENDING_REVIEW and (steps or terminal is not None):
         raise JournalViolation("Pending journal cannot contain progress")
     if status == PREPARED and (unresolved is None or reconciliation is not None or steps[-1]["status"] != PREPARED):

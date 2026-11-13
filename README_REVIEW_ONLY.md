@@ -17,6 +17,7 @@ No recovery DDL, database seed, Alembic reconciliation, shared changes, writer c
 | `docs/M3.2.2_REVISION_2_M321_JOURNAL_P0_REMEDIATION_REVIEW_SUBMISSION.md` | Latest P0 remediation submission for another review-only assessment. |
 | `docs/M3.2.1_PHASE_A2_JOURNAL_REVISION_3_REVIEW_SUBMISSION.md` | P1 orphaned-ownership and simulated Windows-locking evidence submission; review only. |
 | `docs/M3.2.1_PHASE_A2_JOURNAL_REVISION_4_P1_REMEDIATION_REVIEW_SUBMISSION.md` | P1 lock-metadata and epoch-monotonicity remediation submission; review only. |
+| `docs/M3.2.1_PHASE_A2_JOURNAL_REVISION_5_HISTORICAL_EPOCH_AND_OFFLINE_TEST_REVIEW_SUBMISSION.md` | Historical epoch and offline file-backed test-harness remediation submission; review only. |
 | `docs/M3.2.1_PHASE_A2_DISPOSABLE_REHEARSAL_AUTHORIZATION_PROPOSAL.md` | Separate future disposable-rehearsal proposal; it grants no authority. |
 | `tools/recovery/m321_step_journal.py` | Review-only journal model with exclusive writer locking, persisted `PREPARED` evidence, atomic persistence, integrity verification, immutable metadata, and full persisted-step invariant validation; it cannot execute SQL or retry unresolved work. |
 | `tools/recovery/m321_step_journal_contract.md` | The required journal fields and terminal-stop contract. |

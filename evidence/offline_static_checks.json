@@ -1,23 +1,22 @@
 {
-  "checked_at_utc": "2026-11-13T03:15:00Z",
+  "checked_at_utc": "2026-11-13T03:35:00Z",
+  "execution_scope": "offline only; no infrastructure command executed",
   "results": [
     {
-      "command": "python -m py_compile tools/recovery/m321_step_journal.py tests/recovery/test_m321_step_journal.py",
+      "command": "python -m py_compile tools/recovery/m321_step_journal.py tests/recovery/test_m321_step_journal.py tests/recovery/test_m321_prepared_journal_review_only.py",
       "exit_code": 0,
       "stdout": "",
       "stderr": ""
     },
     {
-      "command": "python -m pytest -q -p no:cacheprovider tests/recovery/test_m321_step_journal.py tests/recovery/test_m322_architecture_contract_review.py",
+      "command": "python -m pytest -q -p no:cacheprovider tests/recovery",
       "exit_code": 0,
-      "stdout": ".........................                                                [100%]\n25 passed in 0.39s\n",
+      "stdout": "..............................s....................................      [100%]\n66 passed, 1 skipped in 1.36s\n",
       "stderr": ""
-    },
-    {
-      "command": "python -m pytest -q -p no:cacheprovider --basetemp .offline-test-tmp-20261113 tests/recovery",
-      "exit_code": 1,
-      "stdout": "50 passed, 1 skipped, 10 errors before session finish; not an acceptance result.",
-      "stderr": "Windows sandbox returned WinError 5 while pytest accessed its configured base temporary directory. No database, Docker, Alembic, Redis, writer, or worker operation was attempted."
     }
-  ]
+  ],
+  "superseded_environment_issue": {
+    "status": "resolved_in_offline_test_harness",
+    "description": "The former pytest tmp_path/child-directory WinError 5 path was replaced with UUID-scoped flat files under a configurable local temporary root."
+  }
 }

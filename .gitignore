@@ -5,6 +5,10 @@ apps/api/venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.offline-pytest-tmp/
+.offline-test-tmp-*/
+.pytest-tmp-m321-review/
+pytest-cache-files-*/
 .mypy_cache/
 .ruff_cache/
 .coverage
